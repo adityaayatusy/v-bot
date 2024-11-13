@@ -38,7 +38,8 @@ const getInterfaceStatus = async (waPage) => {
         const elLoginWrapper2 = document.querySelector('body > div > div > div > .landing-wrapper');
         const elQRCodeCanvas = document.querySelector('canvas');
         if ((elLoginWrapper && elQRCodeCanvas) ||
-            (elLoginWrapper2 && elQRCodeCanvas)) {
+            (elLoginWrapper2 && elQRCodeCanvas) ||
+            elQRCodeCanvas) {
             return 'UNPAIRED';
         }
         const streamStatus = window?.Store?.Stream?.displayInfo;
