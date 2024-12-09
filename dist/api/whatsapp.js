@@ -168,31 +168,39 @@ class Whatsapp extends controls_layer_1.ControlsLayer {
      */
     async decryptFile(message) {
         const options = (0, decrypt_1.makeOptions)(WAuserAgente_1.useragentOverride);
-        message.clientUrl =
-            message.clientUrl !== undefined
-                ? message.clientUrl
-                : message.deprecatedMms3Url;
+        message.clientUrl = message.clientUrl ?? message.deprecatedMms3Url;
         if (!message.clientUrl) {
-            throw new Error('message is missing critical data needed to download the file.');
+            throw new Error('Message is missing critical data needed to download the file.');
         }
-        let haventGottenImageYet = true, res;
-        try {
-            while (haventGottenImageYet) {
-                res = await axios_1.default.get(message.clientUrl.trim(), options);
-                if (res.status == 200) {
-                    haventGottenImageYet = false;
-                }
-                else {
-                    await (0, decrypt_1.timeout)(2000);
+        const maxRetries = 5; // Limit retries to prevent memory issues
+        const retryDelay = 2000; // 2 seconds between retries
+        let attempts = 0;
+        let response = null;
+        while (attempts < maxRetries) {
+            try {
+                response = await axios_1.default.get(message.clientUrl.trim(), {
+                    ...options,
+                    responseType: 'arraybuffer' // Use `arraybuffer` to handle binary data efficiently
+                });
+                if (response.status === 200) {
+                    break; // Exit loop if successful
                 }
             }
+            catch (error) {
+                console.error(`Attempt ${attempts + 1} failed:`, error.message);
+            }
+            attempts++;
+            if (attempts < maxRetries) {
+                await (0, decrypt_1.timeout)(retryDelay);
+            }
         }
-        catch (error) {
-            console.error(error);
-            throw 'Error trying to download the file.';
+        if (!response || response.status !== 200) {
+            throw new Error('Failed to download the file after multiple attempts.');
         }
-        const buff = Buffer.from(res.data, 'binary');
-        return (0, decrypt_1.magix)(buff, message.mediaKey, message.type, message.size);
+        // Convert the response data into a buffer
+        const buffer = Buffer.from(response.data);
+        // Process the buffer and return the result
+        return (0, decrypt_1.magix)(buffer, message.mediaKey, message.type, message.size);
     }
 }
 exports.Whatsapp = Whatsapp;
